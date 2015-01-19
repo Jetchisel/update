@@ -1,0 +1,182 @@
+#!/usr/bin/env bash
+
+# ============================================================================================= #
+#: Title           : update                                                                     #
+#: Sypnosis        : update                                                                     #
+#: Date Created    : Thu May  8 02:42:32 PHT 2014 / Wed May  7 18:42:32 UTC 2014                #
+#: Last Edit       : Tue Aug 19 01:34:56 PHT 2014 / Mon Aug 18 17:34:56 UTC 2014                #
+#: License         : GPLv3                                                                      #
+#: Version         : 1.0                                                                        #
+#: Author          : Jason V. Ferrer '<jetchisel@opensuse.org>'                                 #
+#: Description     : Disable multiversion,deltarpm,autorefresh. Enable package cache and update.#
+#: Options         : None                                                                       #
+#: Home Page       : None                                                                       #
+#: ExtComm         : ed,cp,curl,grep,stat,su,zypper                                             #
+# ============================================================================================= #
+
+# ********************************************************************************************* #
+#                                                                                               #
+#   Warn and die functions, for exit messages and default status or an optional exit status.    #
+#                                                                                               #
+# ********************************************************************************************* #
+
+warn() {
+  printf '%s\n' "${BASH_SOURCE##*/}: error: $@" >&2
+}
+
+die() {
+  local st=$?
+  case $2 in
+    *[^0-9]*|'') :;;
+    *) st=$2;;
+  esac
+  warn "$1"
+  exit "$st"
+}
+
+# ********************************************************************************************* #
+#                                                                                               #
+#                        If user is not root exit with an error message.                        #
+#                                                                                               #
+# ********************************************************************************************* #
+
+(( EUID == 0 )) || die "Root privileges are required for refreshing system repositories."
+
+# ********************************************************************************************* #
+#                                                                                               #
+#                          Remove the executable bit of packagekitd.                            #
+#                                                                                               #
+# ********************************************************************************************* #
+
+[[ $(\stat -c '%A' /usr/lib/packagekitd) = *x* ]] && \chmod -x /usr/lib/packagekitd
+
+# ********************************************************************************************* #
+#                                                                                               #
+#       Assign zypp.conf in the variable zypp but exit with an error if it did not exist.       #
+#                                                                                               #
+# ********************************************************************************************* #
+
+zypp=/etc/zypp/zypp.conf
+
+[[ -f $zypp ]] || die "$zypp no such file or directory!"
+
+# ********************************************************************************************* #
+#                                                                                               #
+#      Create a backup of zypp.conf with an extension .default if it did not exist already.     #
+#                                                                                               #
+# ********************************************************************************************* #
+
+if [[ ! -f ${zypp}.default ]]; then 
+  cp "$zypp" "${zypp}.default" || die "Check your permissions!"
+fi
+
+# ********************************************************************************************* #
+#                                                                                               #
+#  Comment out lines starting from "multiversion =" and "multiversion." in /etc/zypp/zypp.conf  #
+#                                                                                               #
+# ********************************************************************************************* #
+
+if grep -q "^multiversion[[:space:].]" "$zypp"; then
+  ed -s "$zypp" <<< $'g/^multiversion[[:space:].]/s/^/# /\nw\nq'
+fi
+
+# ********************************************************************************************* #
+#                                                                                               #
+#                   Uncomment both delta rpm entries in /etc/zypp/zypp.conf                     #
+#                                                                                               #
+# ********************************************************************************************* #
+
+if grep -q "^#[[:space:]]*download.use_deltarpm" "$zypp"; then
+  ed -s "$zypp" <<< $'g/^#[[:space:]]*download.use_deltarpm/s/^#[[:space:]]*//\nw\nq'
+fi
+
+# ********************************************************************************************* #
+#                                                                                               #
+#          Replace the value of download.use_deltarpm with false if it is true value.           #
+#                                                                                               #
+# ********************************************************************************************* #
+
+if grep -q "^download.use_deltarpm.*[[:space:]]*=*[[:space:]]*true$" "$zypp"; then
+  ed -s "$zypp" <<< $'g/^\(download\.use_deltarpm.*[[:space:]]*=\).*$/s//\\1 false/\nw\nq'
+fi
+
+# ********************************************************************************************* #
+#                                                                                               #
+#                         Create an array of all the repos in repos.d                           #
+#                                                                                               #
+# ********************************************************************************************* #
+
+AllRepos=(/etc/zypp/repos.d/*.repo)
+
+# ********************************************************************************************* #
+#                                                                                               #
+#   Create an array of FileName and PathName from all the enabled repos by skipping enabled=0   #
+#                                                                                               #
+# ********************************************************************************************* #
+
+PathNameEnabledRepos=()
+RepoName=()
+
+for repos in "${AllRepos[@]}"; do
+  grep -Fq 'enabled=0' "$repos" && continue
+  PathNameEnabledRepos+=("${repos}")
+  repos=${repos##*/} 
+  repos=${repos%.*}
+  RepoName+=("${repos}")
+done
+
+# ********************************************************************************************* #
+#                                                                                               #
+#          Disable autorefresh of repos (if any) regardless if it is enabled or not.            #
+#                                                                                               #
+# ********************************************************************************************* #
+
+for repos in "${AllRepos[@]}"; do
+  grep -Fq 'autorefresh=1' "$repos" && ed -s "$repos" <<< $'/\(autorefresh=\).*/s//\\10/\nw\nq'
+done
+
+# ********************************************************************************************* #
+#                                                                                               #
+#    keep packages on all enabled repos, either append keeppackages=1 or replace 0 with 1.      #
+#                                                                                               #
+# ********************************************************************************************* #
+
+for repos in "${PathNameEnabledRepos[@]}"; do
+  if ! grep -q keeppackages "$repos"; then 
+    ed -s "$repos" <<< $'$a\nkeeppackages=1\n.\nw\nq'
+  elif grep -Fq 'keeppackages=0' "$repos"; then
+    ed -s "$repos" <<< $'/\(keeppackages=\).*/s//\\11/\nw\nq'
+  fi
+done
+
+# ********************************************************************************************* #
+#                                                                                               #
+#       if download.opensuse.org is not responding to you then exit with an error message.      #
+#                                                                                               #
+# ********************************************************************************************* #
+
+curl -Lsf download.opensuse.org >/dev/null || die 'Could connect to download.opensuse.org!'
+
+# ********************************************************************************************* #
+#                                                                                               #
+#                            Refresh all enabled repos and update.                              #
+#                                                                                               #
+# ********************************************************************************************* #
+
+zypper ref "${RepoName[@]}" 
+
+zypper up
+
+# ********************************************************************************************* #
+#                                                                                               #
+#                                     Set the exit staus.                                       #
+#                                                                                               #
+# ********************************************************************************************* #
+
+exit 0
+
+# ============================================================================================= #
+#                                                                                               #
+#                                    >>> END OF SCRIPT <<<                                      #
+#                                                                                               #
+# ============================================================================================= #
