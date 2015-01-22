@@ -42,6 +42,26 @@ die() {
 
 (( EUID == 0 )) || die "Root privileges are required for refreshing system repositories."
 
+# ******************************************************************************************** #
+#                                                                                              #
+#        Check for the required app/executable is with in your PATH, exit otherwise.           #
+#                                                                                              #
+# ******************************************************************************************** #
+
+Missing=()
+ExtComm=(ed cp curl grep stat su zypper)
+MissingMessage="is either not installed or it is not in your PATH!"
+ExitMessage="Will not continue because of missing: $@"
+
+for apps in "${ExtComm[@]}"; do
+  if ! type -P "$apps" >/dev/null; then
+    echo "$apps $MissingMessage" >&2
+    Missing+=("$apps")
+  fi
+done
+
+(( ! ${#Missing[@]} )) || die "$ExitMessage[${Missing[*]}] exiting now!"
+
 # ********************************************************************************************* #
 #                                                                                               #
 #                          Remove the executable bit of packagekitd.                            #
@@ -58,7 +78,7 @@ die() {
 
 zypp=/etc/zypp/zypp.conf
 
-[[ -f $zypp ]] || die "$zypp no such file or directory!"
+[[ -s $zypp ]] || die "$zypp no such file or directory!"
 
 # ********************************************************************************************* #
 #                                                                                               #
@@ -66,7 +86,7 @@ zypp=/etc/zypp/zypp.conf
 #                                                                                               #
 # ********************************************************************************************* #
 
-if [[ ! -f ${zypp}.default ]]; then 
+if [[ ! -s ${zypp}.default ]]; then
   cp "$zypp" "${zypp}.default" || die "Check your permissions!"
 fi
 
@@ -120,7 +140,7 @@ RepoName=()
 for repos in "${AllRepos[@]}"; do
   grep -Fq 'enabled=0' "$repos" && continue
   PathNameEnabledRepos+=("${repos}")
-  repos=${repos##*/} 
+  repos=${repos##*/}
   repos=${repos%.*}
   RepoName+=("${repos}")
 done
@@ -142,7 +162,7 @@ done
 # ********************************************************************************************* #
 
 for repos in "${PathNameEnabledRepos[@]}"; do
-  if ! grep -q keeppackages "$repos"; then 
+  if ! grep -q keeppackages "$repos"; then
     ed -s "$repos" <<< $'$a\nkeeppackages=1\n.\nw\nq'
   elif grep -Fq 'keeppackages=0' "$repos"; then
     ed -s "$repos" <<< $'/\(keeppackages=\).*/s//\\11/\nw\nq'
@@ -163,7 +183,7 @@ curl -Lsf download.opensuse.org >/dev/null || die 'Could connect to download.ope
 #                                                                                               #
 # ********************************************************************************************* #
 
-zypper ref "${RepoName[@]}" 
+zypper ref "${RepoName[@]}"
 
 zypper up
 
