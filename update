@@ -44,7 +44,7 @@ die() {
 
 # ******************************************************************************************** #
 #                                                                                              #
-#        Check for the required app/executable is with in your PATH, exit otherwise.           #
+#          Check for the required app/executable is with in your PATH, exit otherwise.         #
 #                                                                                              #
 # ******************************************************************************************** #
 
