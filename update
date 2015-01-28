@@ -4,14 +4,14 @@
 #: Title           : update                                                                     #
 #: Sypnosis        : update                                                                     #
 #: Date Created    : Thu May  8 02:42:32 PHT 2014 / Wed May  7 18:42:32 UTC 2014                #
-#: Last Edit       : Thu Jan 22 18:13:27 PHT 2015 / Thu Jan 22 10:13:27 UTC 2015                #
+#: Last Edit       : Wed Jan 28 21:13:54 PHT 2015 / Wed Jan 28 13:13:54 UTC 2015                #
 #: License         : GPLv3                                                                      #
-#: Version         : 1.0                                                                        #
+#: Version         : 1.4.0                                                                      #
 #: Author          : Jason V. Ferrer '<jetchisel@opensuse.org>'                                 #
 #: Description     : Disable multiversion,deltarpm,autorefresh. Enable package cache and update.#
 #: Options         : None                                                                       #
 #: Home Page       : None                                                                       #
-#: ExtComm         : ed,cp,curl,grep,stat,su,zypper                                             #
+#: ExtComm         : ed,chmod,cp,curl,grep,stat,su,zypper                                       #
 # ============================================================================================= #
 
 # ********************************************************************************************* #
@@ -21,7 +21,7 @@
 # ********************************************************************************************* #
 
 warn() {
-  printf '%s\n' "${BASH_SOURCE##*/}: error: $@" >&2
+  printf '%s\n' "${BASH_SOURCE##*/}: error: $*" >&2
 }
 
 die() {
@@ -49,9 +49,9 @@ die() {
 # ******************************************************************************************** #
 
 Missing=()
-ExtComm=(ed cp curl grep stat su zypper)
+ExtComm=(ed chmod cp curl grep stat su zypper)
 MissingMessage="is either not installed or it is not in your PATH!"
-ExitMessage="Will not continue because of missing: $@"
+ExitMessage="Will not continue because of missing: "
 
 for apps in "${ExtComm[@]}"; do
   if ! type -P "$apps" >/dev/null; then
@@ -68,7 +68,7 @@ done
 #                                                                                               #
 # ********************************************************************************************* #
 
-[[ $(\stat -c '%A' /usr/lib/packagekitd) = *x* ]] && \chmod -x /usr/lib/packagekitd
+[[ $(stat -c '%A' /usr/lib/packagekitd) = *x* ]] && chmod -x /usr/lib/packagekitd
 
 # ********************************************************************************************* #
 #                                                                                               #
@@ -183,9 +183,7 @@ curl -Lsf download.opensuse.org >/dev/null || die 'Could connect to download.ope
 #                                                                                               #
 # ********************************************************************************************* #
 
-zypper ref "${RepoName[@]}"
-
-zypper up
+zypper ref "${RepoName[@]}" && zypper up
 
 # ********************************************************************************************* #
 #                                                                                               #
