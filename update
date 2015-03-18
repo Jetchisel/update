@@ -4,14 +4,14 @@
 #: Title           : update                                                                     #
 #: Sypnosis        : update                                                                     #
 #: Date Created    : Thu May  8 02:42:32 PHT 2014 / Wed May  7 18:42:32 UTC 2014                #
-#: Last Edit       : Wed Jan 28 21:13:54 PHT 2015 / Wed Jan 28 13:13:54 UTC 2015                #
+#: Last Edit       : Wed Mar 18 15:29:41 PHT 2015 / Wed Mar 18 07:29:41 UTC 2015                #
 #: License         : GPLv3                                                                      #
-#: Version         : 1.4.0                                                                      #
+#: Version         : 1.4.1                                                                      #
 #: Author          : Jason V. Ferrer '<jetchisel@opensuse.org>'                                 #
 #: Description     : Disable multiversion,deltarpm,autorefresh. Enable package cache and update.#
 #: Options         : None                                                                       #
 #: Home Page       : None                                                                       #
-#: ExtComm         : ed,chmod,cp,curl,grep,stat,su,zypper                                       #
+#: ExtComm         : ed,cp,curl,grep,pgrep,su,zypper                                            #
 # ============================================================================================= #
 
 # ********************************************************************************************* #
@@ -21,7 +21,7 @@
 # ********************************************************************************************* #
 
 warn() {
-  printf '%s\n' "${BASH_SOURCE##*/}: error: $*" >&2
+  printf '%s\n' "${BASH_SOURCE##*/}: $*" >&2
 }
 
 die() {
@@ -36,43 +36,46 @@ die() {
 
 # ********************************************************************************************* #
 #                                                                                               #
-#                        If user is not root exit with an error message.                        #
+#  If not root exit. (Aritmethic context in bash, 0 has an exit status of 1 which means error.) #
 #                                                                                               #
 # ********************************************************************************************* #
 
-(( EUID == 0 )) || die "Root privileges are required for refreshing system repositories."
+(( EUID )) && die "Root privileges are required for updating system packages."
 
-# ******************************************************************************************** #
-#                                                                                              #
-#          Check for the required app/executable is with in your PATH, exit otherwise.         #
-#                                                                                              #
-# ******************************************************************************************** #
+# ********************************************************************************************* #
+#                                                                                               #
+#           Check if the required apps/executables is in your PATH, exit otherwise.             #
+#                                                                                               #
+# ********************************************************************************************* #
 
 Missing=()
-ExtComm=(ed chmod cp curl grep stat su zypper)
+ExtComm=(ed cp curl grep pgrep su zypper)
+ExitMessage="Please install the following: "
 MissingMessage="is either not installed or it is not in your PATH!"
-ExitMessage="Will not continue because of missing: "
 
 for apps in "${ExtComm[@]}"; do
   if ! type -P "$apps" >/dev/null; then
-    echo "$apps $MissingMessage" >&2
+    printf '%s %s\n' "$apps" "$MissingMessage" >&2
     Missing+=("$apps")
   fi
 done
 
-(( ! ${#Missing[@]} )) || die "$ExitMessage[${Missing[*]}] exiting now!"
+(( ${#Missing[@]} )) && die "$ExitMessage[${Missing[*]}] exiting now!" 127
 
 # ********************************************************************************************* #
 #                                                                                               #
-#                          Remove the executable bit of packagekitd.                            #
+#   If you despise apper and packageki (for being stubborn) Uncomment this if-statement. :).    #
 #                                                                                               #
 # ********************************************************************************************* #
 
-[[ $(stat -c '%A' /usr/lib/packagekitd) = *x* ]] && chmod -x /usr/lib/packagekitd
+#if [[ $DISPLAY ]]; then
+#  apper_pid=$(pgrep -x apper) && kill -9 "$apper_pid"
+#  packagekit_pid=$(pgrep -x packagekitd) && kill -9 "$packagekit_pid"
+#fi
 
 # ********************************************************************************************* #
 #                                                                                               #
-#       Assign zypp.conf in the variable zypp but exit with an error if it did not exist.       #
+#     Assign zypp.conf in the variable zypp but exit with an error if it does not exists.       #
 #                                                                                               #
 # ********************************************************************************************* #
 
@@ -82,7 +85,7 @@ zypp=/etc/zypp/zypp.conf
 
 # ********************************************************************************************* #
 #                                                                                               #
-#      Create a backup of zypp.conf with an extension .default if it did not exist already.     #
+#      Create a backup of zypp.conf with an extension .default if it is not already created.    #
 #                                                                                               #
 # ********************************************************************************************* #
 
@@ -122,11 +125,13 @@ fi
 
 # ********************************************************************************************* #
 #                                                                                               #
-#                         Create an array of all the repos in repos.d                           #
+#   Create an array of all the repos in repos.d, exit if there is none ( just making sure :) )  #
 #                                                                                               #
 # ********************************************************************************************* #
 
-AllRepos=(/etc/zypp/repos.d/*.repo)
+shopt -s nullglob
+
+AllRepos=(/etc/zypp/repos.d/*.repo) || die "You don't seem to have any reopsitory!"
 
 # ********************************************************************************************* #
 #                                                                                               #
@@ -135,14 +140,13 @@ AllRepos=(/etc/zypp/repos.d/*.repo)
 # ********************************************************************************************* #
 
 PathNameEnabledRepos=()
-RepoName=()
+FileNameEnabledRepos=()
 
 for repos in "${AllRepos[@]}"; do
   grep -Fq 'enabled=0' "$repos" && continue
-  PathNameEnabledRepos+=("${repos}")
+  PathNameEnabledRepos+=("$repos")
   repos=${repos##*/}
-  repos=${repos%.*}
-  RepoName+=("${repos}")
+  FileNameEnabledRepos+=("${repos%.*}")
 done
 
 # ********************************************************************************************* #
@@ -171,6 +175,16 @@ done
 
 # ********************************************************************************************* #
 #                                                                                               #
+#           Check if internet connection is up, otherwise exit with an error message.           #
+#                                                                                               #
+# ********************************************************************************************* #
+
+if ! curl -Lsf google.com >/dev/null; then
+  die 'You are not online, please check your network settings!'
+fi
+
+# ********************************************************************************************* #
+#                                                                                               #
 #       if download.opensuse.org is not responding to you then exit with an error message.      #
 #                                                                                               #
 # ********************************************************************************************* #
@@ -183,7 +197,7 @@ curl -Lsf download.opensuse.org >/dev/null || die 'Could connect to download.ope
 #                                                                                               #
 # ********************************************************************************************* #
 
-zypper ref "${RepoName[@]}" && zypper up
+zypper ref "${FileNameEnabledRepos[@]}" && zypper up
 
 # ********************************************************************************************* #
 #                                                                                               #
