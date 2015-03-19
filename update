@@ -4,7 +4,7 @@
 #: Title           : update                                                                     #
 #: Sypnosis        : update                                                                     #
 #: Date Created    : Thu May  8 02:42:32 PHT 2014 / Wed May  7 18:42:32 UTC 2014                #
-#: Last Edit       : Wed Mar 18 15:29:41 PHT 2015 / Wed Mar 18 07:29:41 UTC 2015                #
+#: Last Edit       : Thu Mar 19 13:32:15 PHT 2015 / Thu Mar 19 05:32:15 UTC 2015                #
 #: License         : GPLv3                                                                      #
 #: Version         : 1.4.1                                                                      #
 #: Author          : Jason V. Ferrer '<jetchisel@opensuse.org>'                                 #
@@ -12,6 +12,7 @@
 #: Options         : None                                                                       #
 #: Home Page       : None                                                                       #
 #: ExtComm         : ed,cp,curl,grep,pgrep,su,zypper                                            #
+#: TODO            : Skip local repos like hd,cd,dvd,iso,dir,usb and _tmpRPMcache_              #
 # ============================================================================================= #
 
 # ********************************************************************************************* #
