@@ -147,7 +147,7 @@ FileNameEnabledRepos=()
 
 for repos in "${GoodRepos[@]}"; do
   grep -Fq 'enabled=0' "$repos" && continue
-  grep -Eq '^baseurl=(hd:|dir:|cd:|dvd:|iso:|usb:)' && continue
+  grep -Eq '^baseurl=(hd:|dir:|cd:|dvd:|iso:|usb:)' "$repos" && continue
   PathNameEnabledRepos+=("$repos")
   repos=${repos##*/}
   FileNameEnabledRepos+=("${repos%.*}")
