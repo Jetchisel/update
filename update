@@ -4,15 +4,15 @@
 #: Title           : update                                                                     #
 #: Sypnosis        : update                                                                     #
 #: Date Created    : Thu May  8 02:42:32 PHT 2014 / Wed May  7 18:42:32 UTC 2014                #
-#: Last Edit       : Thu Mar 19 13:32:15 PHT 2015 / Thu Mar 19 05:32:15 UTC 2015                #
+#: Last Edit       : Fri Mar 20 15:12:18 PHT 2015 / Fri Mar 20 07:12:18 UTC 2015                #
 #: License         : GPLv3                                                                      #
-#: Version         : 1.4.1                                                                      #
+#: Version         : 1.4.2                                                                      #
 #: Author          : Jason V. Ferrer '<jetchisel@opensuse.org>'                                 #
 #: Description     : Disable multiversion,deltarpm,autorefresh. Enable package cache and update.#
 #: Options         : None                                                                       #
 #: Home Page       : None                                                                       #
 #: ExtComm         : ed,cp,curl,grep,pgrep,su,zypper                                            #
-#: TODO            : Skip local repos like hd,cd,dvd,iso,dir,usb and _tmpRPMcache_              #
+#: TODO            : test if local repos like hd,cd,dvd,iso,dir,usb does exists and refresh it. #
 # ============================================================================================= #
 
 # ********************************************************************************************* #
@@ -130,9 +130,11 @@ fi
 #                                                                                               #
 # ********************************************************************************************* #
 
-shopt -s nullglob
+shopt -s nullglob extglob
 
 AllRepos=(/etc/zypp/repos.d/*.repo) || die "You don't seem to have any reopsitory!"
+
+GoodRepos=(/etc/zypp/repos.d/!(_tmpRPMcache_).repo)
 
 # ********************************************************************************************* #
 #                                                                                               #
@@ -143,8 +145,9 @@ AllRepos=(/etc/zypp/repos.d/*.repo) || die "You don't seem to have any reopsitor
 PathNameEnabledRepos=()
 FileNameEnabledRepos=()
 
-for repos in "${AllRepos[@]}"; do
+for repos in "${GoodRepos[@]}"; do
   grep -Fq 'enabled=0' "$repos" && continue
+  grep -Eq '^baseurl=(hd:|dir:|cd:|dvd:|iso:|usb:)' && continue
   PathNameEnabledRepos+=("$repos")
   repos=${repos##*/}
   FileNameEnabledRepos+=("${repos%.*}")
@@ -156,7 +159,7 @@ done
 #                                                                                               #
 # ********************************************************************************************* #
 
-for repos in "${AllRepos[@]}"; do
+for repos in "${GoodRepos[@]}"; do
   grep -Fq 'autorefresh=1' "$repos" && ed -s "$repos" <<< $'/\(autorefresh=\).*/s//\\10/\nw\nq'
 done
 
