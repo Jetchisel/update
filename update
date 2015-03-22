@@ -4,9 +4,9 @@
 #: Title           : update                                                                     #
 #: Sypnosis        : update                                                                     #
 #: Date Created    : Thu May  8 02:42:32 PHT 2014 / Wed May  7 18:42:32 UTC 2014                #
-#: Last Edit       : Fri Mar 20 15:12:18 PHT 2015 / Fri Mar 20 07:12:18 UTC 2015                #
+#: Last Edit       : Sun Mar 22 15:37:55 PHT 2015 / Sun Mar 22 07:37:55 UTC 2015                #
 #: License         : GPLv3                                                                      #
-#: Version         : 1.4.2                                                                      #
+#: Version         : 1.4.3                                                                      #
 #: Author          : Jason V. Ferrer '<jetchisel@opensuse.org>'                                 #
 #: Description     : Disable multiversion,deltarpm,autorefresh. Enable package cache and update.#
 #: Options         : None                                                                       #
@@ -148,6 +148,7 @@ FileNameEnabledRepos=()
 for repos in "${GoodRepos[@]}"; do
   grep -Fq 'enabled=0' "$repos" && continue
   grep -Eq '^baseurl=(hd:|dir:|cd:|dvd:|iso:|usb:)' "$repos" && continue
+  ed -s "$repos" <<< $'/^baseurl/s/download\.opensuse\.org/192.135.221.134/\nw'
   PathNameEnabledRepos+=("$repos")
   repos=${repos##*/}
   FileNameEnabledRepos+=("${repos%.*}")
