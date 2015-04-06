@@ -4,9 +4,9 @@
 #: Title           : update                                                                     #
 #: Sypnosis        : update                                                                     #
 #: Date Created    : Thu May  8 02:42:32 PHT 2014 / Wed May  7 18:42:32 UTC 2014                #
-#: Last Edit       : Mon Mar 23 15:20:25 PHT 2015 / Mon Mar 23 07:20:25 UTC 2015                #
+#: Last Edit       : Mon Apr  6 08:56:53 PHT 2015 / Mon Apr  6 00:56:53 UTC 2015               #
 #: License         : GPLv3                                                                      #
-#: Version         : 1.4.4                                                                      #
+#: Version         : 1.5.4                                                                      #
 #: Author          : Jason V. Ferrer '<jetchisel@opensuse.org>'                                 #
 #: Description     : Disable multiversion,deltarpm,autorefresh. Enable package cache and update.#
 #: Options         : None                                                                       #
@@ -205,7 +205,7 @@ curl -Lsf download.opensuse.org >/dev/null || die 'Could connect to download.ope
 #                                                                                               #
 # ********************************************************************************************* #
 
-zypper ref "${FileNameEnabledRepos[@]}" && zypper up
+zypper ref "${FileNameEnabledRepos[@]}" && exec zypper up
 
 # ********************************************************************************************* #
 #                                                                                               #
