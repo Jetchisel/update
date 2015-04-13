@@ -4,9 +4,9 @@
 #: Title           : update                                                                     #
 #: Sypnosis        : update                                                                     #
 #: Date Created    : Thu May  8 02:42:32 PHT 2014 / Wed May  7 18:42:32 UTC 2014                #
-#: Last Edit       : Mon Apr  6 08:56:53 PHT 2015 / Mon Apr  6 00:56:53 UTC 2015               #
+#: Last Edit       : Tue Apr 14 07:39:56 PHT 2015 / Mon Apr 13 23:39:56 UTC 2015                #
 #: License         : GPLv3                                                                      #
-#: Version         : 1.5.4                                                                      #
+#: Version         : 1.5.6                                                                      #
 #: Author          : Jason V. Ferrer '<jetchisel@opensuse.org>'                                 #
 #: Description     : Disable multiversion,deltarpm,autorefresh. Enable package cache and update.#
 #: Options         : None                                                                       #
@@ -37,11 +37,11 @@ die() {
 
 # ********************************************************************************************* #
 #                                                                                               #
-#  If not root exit. (Aritmethic context in bash, 0 has an exit status of 1 which means error.) #
+#                         If not root exit with an error message.                               #
 #                                                                                               #
 # ********************************************************************************************* #
 
-(( EUID )) && die "Root privileges are required for updating system packages."
+(( EUID )) && die "Root privileges are required for updating system packages." 1
 
 # ********************************************************************************************* #
 #                                                                                               #
@@ -65,7 +65,7 @@ done
 
 # ********************************************************************************************* #
 #                                                                                               #
-#   If you despise apper and packageki (for being stubborn) Uncomment this if-statement. :).    #
+#   If you despise apper and packagekit (for being stubborn) Uncomment this if-statement. :).   #
 #                                                                                               #
 # ********************************************************************************************* #
 
